@@ -1,4 +1,8 @@
+document.getElementById("chess-board").addEventListener("contextmenu", (event) => event.preventDefault());
+
 const chessBoard = [];
+
+const engine = new Engine(20);
 
 var previousI = null;
 var previousJ = null;
@@ -8,6 +12,9 @@ var currentJ = null;
 
 var dragI = null;
 var dragJ = null;
+
+var clickI = dragI;
+var clickJ = dragJ;
 
 let blackKing;
 let blackQueen;
@@ -26,7 +33,7 @@ let whitePawn;
 const isWhite = true;
 
 function setup() {
-	var canvas = createCanvas(400, 400);
+	var canvas = createCanvas(600, 600);
 	canvas.parent("chess-board");
 
 	for (var i = 0; i < 8; i++) {
@@ -92,40 +99,83 @@ function draw() {
 	noStroke();
 
 	drawBoard(isWhite);
+
 	drawPieces();
 
 	checkHover();
 }
 
 function mousePressed() {
-	let arr = checkHover();
-	dragI = arr[1];
-	dragJ = arr[2];
-	if (arr[1] != null) {
-		document.getElementById("chess-board").style.cursor = "grabbing";
+	if (mouseButton == LEFT) {
+		let arr = checkHover();
+		if (
+			(clickI == null ||
+				engine
+					.findPossibleMoves(
+						chessBoard,
+						chessBoard[clickI][clickJ][0].slice(6),
+						chessBoard[clickI][clickJ][0].slice(0, 5),
+						clickI,
+						clickJ,
+					)
+					.indexOf([clickI, clickJ]) == -1) &&
+			chessBoard[arr[1]][arr[2]][0] != ""
+		) {
+			dragI = arr[1];
+			dragJ = arr[2];
+			clickI = dragI;
+			clickJ = dragJ;
+			if (arr[1] != null) {
+				document.getElementById("chess-board").style.cursor = "grabbing";
+			}
+		}
+	} else if (mouseButton == RIGHT) {
 	}
 }
 
 function mouseReleased() {
 	let arr = checkHover();
 	let mouseI = arr[1];
-	let mouseJ = arr[2];
-    console.log(
-        
-    )
-    if (
-			mouseI > -1 &&
-			mouseJ > -1 &&
-			mouseI < chessBoard.length &&
-			mouseJ < chessBoard[0].length &&
-			(chessBoard[mouseI][mouseJ][0] == "" ||
-				chessBoard[mouseI][mouseJ][0].slice(0, 4) !=
-					chessBoard[dragI][dragJ][0].slice(0, 4))
-		) {
-			let temp = chessBoard[dragI][dragJ];
-			chessBoard[dragI][dragJ] = ["", null];
-			chessBoard[arr[1]][arr[2]] = temp;
-		}
+    let mouseJ = arr[2];
+
+    console.log("engine legality",
+        engine.checkMoveLegality(
+            chessBoard,
+            chessBoard[clickI][clickJ][0].slice(6),
+            chessBoard[clickI][clickJ][0].slice(0, 5),
+            clickI,
+            clickJ,
+            mouseI,
+            mouseJ,
+        ),
+    );;
+
+	if (
+		mouseI > -1 &&
+		mouseJ > -1 &&
+		mouseI < chessBoard.length &&
+		mouseJ < chessBoard[0].length &&
+		clickI != null &&
+		clickJ != null &&
+		engine.checkMoveLegality(
+			chessBoard,
+			chessBoard[clickI][clickJ][0].slice(6),
+			chessBoard[clickI][clickJ][0].slice(0, 5),
+			clickI,
+			clickJ,
+			mouseI,
+			mouseJ,
+		)
+	) {
+		let temp = chessBoard[clickI][clickJ];
+		chessBoard[clickI][clickJ] = ["", null];
+		chessBoard[arr[1]][arr[2]] = temp;
+		clickI = null;
+		clickJ = null;
+	} else if (dragI == null) {
+		clickI = null;
+		clickJ = null;
+	}
 	dragI = null;
 	dragJ = null;
 }
@@ -182,7 +232,29 @@ function drawPieces() {
 		}
 	}
 
-    if (dragI != null && dragJ != null && dragI < chessBoard.length && dragJ < chessBoard[0].length && dragI > -1 && dragJ > -1) {
+	if (clickI != null) {
+		let possibleMoves = engine.findPossibleMoves(
+			chessBoard,
+			chessBoard[clickI][clickJ][0].slice(6),
+			chessBoard[clickI][clickJ][0].slice(0, 5),
+			clickI,
+			clickJ,
+		);
+
+		if (possibleMoves != null) {
+			showMoves(possibleMoves);
+		}
+	}
+
+	if (
+		dragI != null &&
+		dragJ != null &&
+		dragI < chessBoard.length &&
+		dragJ < chessBoard[0].length &&
+		dragI > -1 &&
+		dragJ > -1 &&
+		chessBoard[dragI][dragJ][1] != null
+	) {
 		image(
 			chessBoard[dragI][dragJ][1],
 			mouseX - width / 16,
@@ -190,5 +262,33 @@ function drawPieces() {
 			width / 8,
 			height / 8,
 		);
+	}
+}
+
+function showMoves(possibleMoves) {
+	for (var i = 0; i < possibleMoves.length; i++) {
+		let possibleI = possibleMoves[i][0];
+		let possibleJ = possibleMoves[i][1];
+		if (chessBoard[possibleI][possibleJ][0] == "") {
+			strokeWeight(5);
+			stroke(0, 0, 0, 100);
+			fill(0, 0, 0, 100);
+			circle(
+				(possibleI * height) / 8 + height / 16,
+				(possibleJ * width) / 8 + width / 16,
+				height / 24,
+				width / 24,
+			);
+		} else {
+			strokeWeight(5);
+			stroke(0, 0, 0, 100);
+			fill(0, 0, 0, 0);
+			circle(
+				(possibleI * height) / 8 + height / 16,
+				(possibleJ * width) / 8 + width / 16,
+				height / 8,
+				width / 8,
+			);
+		}
 	}
 }
